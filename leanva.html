@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>LeanVA</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap');
+
+:root{
+  --bg:#0C0C10;--bg2:#141418;--bg3:#1C1C24;--ln:#28283A;
+  --va:#00C853;--nva:#FF1744;--acc:#7C6FFF;
+  --warn:#FFB300;--txt:#E8E8F4;--mut:#5A5A7A;--r:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;user-select:none;}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--txt);font-family:'DM Mono',monospace;}
+#app{display:flex;flex-direction:column;height:100dvh;}
+
+/* TOPBAR */
+#topbar{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--bg2);border-bottom:1px solid var(--ln);flex-shrink:0;}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.05rem;color:var(--acc);}
+.logo span{color:var(--va);}
+.spacer{flex:1;}
+.tbtn{background:var(--bg3);border:1px solid var(--ln);color:var(--txt);border-radius:7px;padding:5px 12px;font-size:.7rem;font-family:'DM Mono',monospace;cursor:pointer;}
+.tbtn.on{background:var(--acc);border-color:var(--acc);color:#fff;}
+
+/* PAGES */
+.page{display:none;flex:1;flex-direction:column;overflow:hidden;}
+.page.on{display:flex;}
+
+/* ══ PAGE CHRONO ══════════════════════════════════════ */
+#pg-chrono{overflow-y:auto;}
+
+/* Stats bar */
+#stats-bar{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-bottom:1px solid var(--ln);flex-shrink:0;}
+.stat-cell{padding:10px 8px;text-align:center;border-right:1px solid var(--ln);}
+.stat-cell:last-child{border-right:none;}
+.stat-cell .sv{font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;}
+.stat-cell .sl{font-size:.58rem;color:var(--mut);text-transform:uppercase;margin-top:1px;}
+.sv.va{color:var(--va);}
+.sv.nva{color:var(--nva);}
+.sv.acc{color:var(--acc);}
+
+/* Barre VA/NVA */
+#ratio-bar{height:8px;background:var(--nva);flex-shrink:0;position:relative;}
+#ratio-va{height:100%;background:var(--va);transition:width .5s;}
+
+/* Chrono principal */
+#chrono-display{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:16px;min-height:180px;
+}
+#current-time{
+  font-family:'Syne',sans-serif;font-size:3.5rem;font-weight:800;
+  letter-spacing:-.02em;transition:color .2s;
+  text-shadow:0 0 30px currentColor;
+}
+#current-type{font-size:.72rem;color:var(--mut);margin-top:4px;letter-spacing:.1em;text-transform:uppercase;}
+#current-cat{font-size:.8rem;margin-top:6px;padding:3px 12px;border-radius:20px;background:var(--bg3);}
+
+/* Boutons VA / NVA */
+#va-nva-btns{display:grid;grid-template-columns:1fr 1fr;gap:0;flex-shrink:0;}
+#btn-va{
+  padding:32px 16px;background:rgba(0,200,83,.15);border:none;
+  border-top:3px solid var(--va);cursor:pointer;
+  font-family:'Syne',sans-serif;font-size:1.6rem;font-weight:800;color:var(--va);
+  transition:background .15s;
+}
+#btn-va:active{background:rgba(0,200,83,.35);}
+#btn-nva{
+  padding:32px 16px;background:rgba(255,23,68,.15);border:none;
+  border-top:3px solid var(--nva);border-left:1px solid var(--ln);cursor:pointer;
+  font-family:'Syne',sans-serif;font-size:1.6rem;font-weight:800;color:var(--nva);
+  transition:background .15s;
+}
+#btn-nva:active{background:rgba(255,23,68,.35);}
+#btn-va.active{background:rgba(0,200,83,.28);box-shadow:inset 0 0 40px rgba(0,200,83,.15);}
+#btn-nva.active{background:rgba(255,23,68,.28);box-shadow:inset 0 0 40px rgba(255,23,68,.15);}
+.btn-sub{font-size:.65rem;font-weight:400;display:block;margin-top:4px;opacity:.7;}
+
+/* Historique */
+#history-wrap{flex-shrink:0;max-height:38vh;overflow-y:auto;border-top:1px solid var(--ln);}
+#history-title{font-size:.62rem;color:var(--mut);text-transform:uppercase;letter-spacing:.08em;
+  padding:8px 14px;background:var(--bg2);position:sticky;top:0;border-bottom:1px solid var(--ln);}
+.hist-item{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--ln);}
+.hist-item:last-child{border-bottom:none;}
+.hi-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.hi-dot.va{background:var(--va);}
+.hi-dot.nva{background:var(--nva);}
+.hi-time{font-size:.75rem;font-weight:500;min-width:52px;}
+.hi-cat{flex:1;font-size:.72rem;color:var(--txt);}
+.hi-cat.unset{color:var(--warn);font-style:italic;}
+.hi-edit{background:none;border:1px solid var(--ln);border-radius:5px;color:var(--mut);
+  font-family:'DM Mono',monospace;font-size:.62rem;padding:3px 8px;cursor:pointer;}
+
+/* ══ PAGE RAPPORT ═════════════════════════════════════ */
+#pg-rapport{padding:14px;overflow-y:auto;}
+.r-header{background:linear-gradient(135deg,#1a1a3a,#2d1a4a);border-radius:var(--r);
+  padding:14px;margin-bottom:12px;}
+.r-header h2{font-family:'Syne',sans-serif;font-size:1rem;color:#fff;}
+.r-header p{font-size:.68rem;color:rgba(255,255,255,.55);margin-top:3px;}
+.r-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+.r-card{background:var(--bg2);border:1px solid var(--ln);border-radius:var(--r);padding:11px;}
+.r-card .rv{font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:800;}
+.r-card .rl{font-size:.6rem;color:var(--mut);text-transform:uppercase;margin-top:2px;}
+.r-bar-wrap{background:var(--bg2);border:1px solid var(--ln);border-radius:var(--r);
+  padding:12px;margin-bottom:12px;}
+.r-bar-wrap h3{font-size:.7rem;color:var(--acc);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;}
+.r-bar-row{margin-bottom:8px;}
+.r-bar-label{display:flex;justify-content:space-between;font-size:.68rem;margin-bottom:3px;}
+.r-bar-label .rbl{color:var(--txt);}
+.r-bar-label .rbv{color:var(--mut);}
+.r-bar-bg{height:8px;background:var(--bg3);border-radius:4px;overflow:hidden;}
+.r-bar-fill{height:100%;border-radius:4px;transition:width .5s;}
+.ebtn{width:100%;padding:11px;border:none;border-radius:var(--r);
+  font-family:'DM Mono',monospace;font-size:.78rem;cursor:pointer;margin-bottom:8px;}
+.ebtn.acc{background:var(--acc);color:#fff;font-weight:700;}
+.ebtn.sec{background:var(--bg3);border:1px solid var(--ln);color:var(--txt);}
+
+/* ══ PAGE SETTINGS ════════════════════════════════════ */
+#pg-settings{padding:14px;overflow-y:auto;}
+.s-section{background:var(--bg2);border:1px solid var(--ln);border-radius:var(--r);
+  padding:14px;margin-bottom:12px;}
+.s-title{font-family:'Syne',sans-serif;font-weight:700;font-size:.78rem;color:var(--acc);
+  text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;}
+.cat-item{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--ln);}
+.cat-item:last-child{border-bottom:none;}
+.cat-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;cursor:pointer;}
+.cat-name{flex:1;font-size:.75rem;}
+.cat-type{font-size:.62rem;padding:2px 8px;border-radius:10px;flex-shrink:0;}
+.cat-type.va{background:rgba(0,200,83,.2);color:var(--va);}
+.cat-type.nva{background:rgba(255,23,68,.2);color:var(--nva);}
+.cat-del{background:none;border:1px solid var(--ln);border-radius:5px;color:var(--nva);
+  font-size:.65rem;padding:3px 8px;cursor:pointer;}
+.add-cat-form{display:flex;flex-direction:column;gap:8px;margin-top:10px;}
+.s-inp{background:var(--bg3);border:1px solid var(--ln);border-radius:7px;color:var(--txt);
+  font-family:'DM Mono',monospace;font-size:.78rem;padding:8px 10px;width:100%;outline:none;}
+.s-inp:focus{border-color:var(--acc);}
+.s-row{display:flex;gap:6px;}
+.s-btn{padding:8px 14px;border:none;border-radius:7px;font-family:'DM Mono',monospace;
+  font-size:.72rem;cursor:pointer;}
+.s-btn.acc{background:var(--acc);color:#fff;}
+.s-btn.sec{background:var(--bg3);border:1px solid var(--ln);color:var(--mut);}
+.type-toggle{display:grid;grid-template-columns:1fr 1fr;gap:4px;}
+.type-opt{padding:7px;text-align:center;border-radius:7px;border:1.5px solid var(--ln);
+  font-size:.72rem;cursor:pointer;transition:all .15s;}
+.type-opt.va-sel{background:rgba(0,200,83,.2);border-color:var(--va);color:var(--va);}
+.type-opt.nva-sel{background:rgba(255,23,68,.2);border-color:var(--nva);color:var(--nva);}
+.field-group{margin-bottom:8px;}
+.field-group label{display:block;font-size:.62rem;color:var(--mut);margin-bottom:4px;
+  text-transform:uppercase;letter-spacing:.04em;}
+
+/* ══ MODAL CLASSIFICATION ═════════════════════════════ */
+#modal-class{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:200;
+  align-items:flex-end;justify-content:center;}
+#modal-class.on{display:flex;}
+.mc-box{background:var(--bg2);border-radius:20px 20px 0 0;padding:16px;width:100%;
+  max-width:440px;max-height:80vh;overflow-y:auto;}
+.mc-header{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.mc-dot{width:14px;height:14px;border-radius:50%;}
+.mc-title{font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;}
+.mc-time{font-size:.7rem;color:var(--mut);margin-left:auto;}
+.mc-section{font-size:.62rem;color:var(--mut);text-transform:uppercase;letter-spacing:.08em;
+  margin:10px 0 6px;}
+.mc-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;}
+.mc-opt{padding:10px 8px;border-radius:9px;border:1.5px solid var(--ln);text-align:center;
+  cursor:pointer;font-size:.72rem;transition:all .15s;}
+.mc-opt.va{border-color:rgba(0,200,83,.3);color:var(--va);}
+.mc-opt.nva{border-color:rgba(255,23,68,.3);color:var(--nva);}
+.mc-opt.sel-va{background:rgba(0,200,83,.25);border-color:var(--va);}
+.mc-opt.sel-nva{background:rgba(255,23,68,.25);border-color:var(--nva);}
+.mc-confirm{width:100%;padding:11px;background:var(--acc);border:none;border-radius:var(--r);
+  color:#fff;font-family:'DM Mono',monospace;font-size:.8rem;cursor:pointer;margin-top:6px;font-weight:700;}
+.mc-skip{width:100%;padding:9px;background:none;border:1px solid var(--ln);border-radius:var(--r);
+  color:var(--mut);font-family:'DM Mono',monospace;font-size:.72rem;cursor:pointer;margin-top:6px;}
+
+/* NAV */
+#nav{display:flex;background:var(--bg2);border-top:1px solid var(--ln);flex-shrink:0;}
+.nav-i{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:8px 4px;cursor:pointer;border:none;background:none;color:var(--mut);
+  font-size:.58rem;font-family:'DM Mono',monospace;gap:2px;transition:color .15s;}
+.nav-i.on{color:var(--acc);}
+.nav-i .ni{font-size:1.1rem;}
+
+/* Toast */
+#toast{position:fixed;bottom:68px;left:50%;transform:translateX(-50%);
+  background:var(--bg3);border:1px solid var(--ln);color:var(--txt);
+  font-size:.7rem;padding:7px 16px;border-radius:20px;z-index:300;
+  opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;}
+#toast.on{opacity:1;}
+</style>
+</head>
+<body>
+<div id="app">
+
+<div id="topbar">
+  <span class="logo">Lean<span>VA</span></span>
+  <div class="spacer"></div>
+  <button class="tbtn" id="btn-session-info" onclick="showSessionModal()">⚙️ Session</button>
+</div>
+
+<!-- ══ PAGE CHRONO ══════════════════════════════════════ -->
+<div class="page on" id="pg-chrono">
+  <div id="stats-bar">
+    <div class="stat-cell">
+      <div class="sv va" id="st-va">0:00</div>
+      <div class="sl">VA</div>
+    </div>
+    <div class="stat-cell">
+      <div class="sv nva" id="st-nva">0:00</div>
+      <div class="sl">NVA</div>
+    </div>
+    <div class="stat-cell">
+      <div class="sv acc" id="st-ratio">—%</div>
+      <div class="sl">% VA</div>
+    </div>
+  </div>
+  <div id="ratio-bar"><div id="ratio-va" style="width:0%"></div></div>
+
+  <div id="chrono-display">
+    <div id="current-time">00:00</div>
+    <div id="current-type">En attente</div>
+    <div id="current-cat">— appuyez pour démarrer —</div>
+  </div>
+
+  <div id="va-nva-btns">
+    <button id="btn-va"  onclick="switchTo('va')">
+      ✅ VA
+      <span class="btn-sub">Valeur ajoutée</span>
+    </button>
+    <button id="btn-nva" onclick="switchTo('nva')">
+      ❌ NVA
+      <span class="btn-sub">Non-valeur ajoutée</span>
+    </button>
+  </div>
+
+  <div id="history-wrap">
+    <div id="history-title">Historique — tap sur une ligne pour classifier</div>
+    <div id="history-list"></div>
+  </div>
+</div>
+
+<!-- ══ PAGE RAPPORT ════════════════════════════════════ -->
+<div class="page" id="pg-rapport">
+  <div style="padding:14px;padding-bottom:80px">
+    <div class="r-header">
+      <h2 id="r-op">Rapport d'observation</h2>
+      <p id="r-sub"></p>
+    </div>
+    <div class="r-grid">
+      <div class="r-card"><div class="rv va" id="rv-va">—</div><div class="rl">Temps VA</div></div>
+      <div class="r-card"><div class="rv nva" id="rv-nva">—</div><div class="rl">Temps NVA</div></div>
+      <div class="r-card"><div class="rv acc" id="rv-ratio">—</div><div class="rl">% VA</div></div>
+      <div class="r-card"><div class="rv" id="rv-seqs">—</div><div class="rl">Séquences</div></div>
+    </div>
+    <div class="r-bar-wrap">
+      <h3>Détail NVA par catégorie</h3>
+      <div id="r-cats"></div>
+    </div>
+    <div class="r-bar-wrap">
+      <h3>Non classifiés</h3>
+      <div id="r-unclass" style="font-size:.72rem;color:var(--warn)">—</div>
+    </div>
+    <button class="ebtn acc" onclick="exportCSV()">📥 Exporter CSV</button>
+    <button class="ebtn sec" onclick="exportPNG()">🖼 Exporter PNG</button>
+    <button class="ebtn sec" onclick="resetSession()" style="color:var(--nva);border-color:var(--nva)">↺ Nouvelle session</button>
+  </div>
+</div>
+
+<!-- ══ PAGE SETTINGS ═══════════════════════════════════ -->
+<div class="page" id="pg-settings">
+  <div style="padding:14px;padding-bottom:80px">
+
+    <div class="s-section">
+      <div class="s-title">Catégories VA</div>
+      <div id="cats-va-list"></div>
+    </div>
+
+    <div class="s-section">
+      <div class="s-title">Catégories NVA</div>
+      <div id="cats-nva-list"></div>
+    </div>
+
+    <div class="s-section">
+      <div class="s-title">➕ Ajouter une catégorie</div>
+      <div class="add-cat-form">
+        <div class="field-group">
+          <label>Nom</label>
+          <input class="s-inp" id="new-cat-name" placeholder="ex: Attente pièce">
+        </div>
+        <div class="field-group">
+          <label>Type</label>
+          <div class="type-toggle">
+            <div class="type-opt nva-sel" id="new-type-nva" onclick="selectNewType('nva')">❌ NVA</div>
+            <div class="type-opt" id="new-type-va" onclick="selectNewType('va')">✅ VA</div>
+          </div>
+        </div>
+        <div class="field-group">
+          <label>Description (optionnel)</label>
+          <input class="s-inp" id="new-cat-desc" placeholder="ex: Temps d'attente de pièce manquante">
+        </div>
+        <div class="s-row">
+          <button class="s-btn acc" style="flex:1" onclick="addCategory()">Ajouter</button>
+          <button class="s-btn sec" onclick="clearNewCatForm()">Effacer</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="s-section">
+      <div class="s-title">Session en cours</div>
+      <div class="field-group">
+        <label>Opérateur</label>
+        <input class="s-inp" id="cfg-op" placeholder="Nom de l'opérateur" onchange="S.config.op=this.value;saveConfig()">
+      </div>
+      <div class="field-group">
+        <label>Poste</label>
+        <input class="s-inp" id="cfg-poste" placeholder="ex: Poste 7190" onchange="S.config.poste=this.value;saveConfig()">
+      </div>
+      <div class="field-group">
+        <label>Takt client (min)</label>
+        <input class="s-inp" id="cfg-takt" type="number" value="165" placeholder="165"
+          onchange="S.config.takt=parseFloat(this.value)||165;saveConfig()">
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- NAV -->
+<div id="nav">
+  <button class="nav-i on" id="nav-chrono" onclick="goPage('chrono')">
+    <span class="ni">⏱</span>Chrono
+  </button>
+  <button class="nav-i" id="nav-rapport" onclick="goPage('rapport')">
+    <span class="ni">📊</span>Rapport
+  </button>
+  <button class="nav-i" id="nav-settings" onclick="goPage('settings')">
+    <span class="ni">⚙️</span>Réglages
+  </button>
+</div>
+
+</div><!-- app -->
+
+<!-- ══ MODAL CLASSIFICATION ════════════════════════════ -->
+<div id="modal-class">
+  <div class="mc-box">
+    <div class="mc-header">
+      <div class="mc-dot" id="mc-dot"></div>
+      <div class="mc-title" id="mc-title">Classifier la séquence</div>
+      <div class="mc-time" id="mc-time-disp"></div>
+    </div>
+    <div id="mc-va-section"></div>
+    <div id="mc-nva-section"></div>
+    <button class="mc-confirm" onclick="confirmClass()">✓ Confirmer</button>
+    <button class="mc-skip" onclick="closeClassModal()">Plus tard</button>
+  </div>
+</div>
+
+<!-- Modal session -->
+<div id="modal-session" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;align-items:flex-end;justify-content:center">
+  <div style="background:var(--bg2);border-radius:20px 20px 0 0;padding:16px;width:100%;max-width:440px">
+    <div style="font-family:Syne,sans-serif;font-weight:700;font-size:.9rem;color:var(--acc);margin-bottom:12px">⚙️ Session</div>
+    <div class="field-group"><label style="font-size:.65rem;color:var(--mut);display:block;margin-bottom:4px;text-transform:uppercase">Opérateur</label>
+      <input class="s-inp" id="sess-op" placeholder="Nom" onchange="S.config.op=this.value;document.getElementById('cfg-op').value=this.value;saveConfig()"></div>
+    <div class="field-group"><label style="font-size:.65rem;color:var(--mut);display:block;margin-bottom:4px;text-transform:uppercase">Poste</label>
+      <input class="s-inp" id="sess-poste" placeholder="ex: Poste 7190" onchange="S.config.poste=this.value;document.getElementById('cfg-poste').value=this.value;saveConfig()"></div>
+    <button onclick="document.getElementById('modal-session').style.display='none'" style="width:100%;padding:10px;background:var(--acc);border:none;border-radius:var(--r);color:#fff;font-family:DM Mono,monospace;font-size:.78rem;cursor:pointer;margin-top:8px">OK</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// CATÉGORIES PAR DÉFAUT
+// ═══════════════════════════════════════════════════════
+var DEFAULT_CATS = [
+  // VA
+  {id:'va-assemblage', name:'Assemblage',      type:'va',  desc:'Montage et fixation de pièces'},
+  {id:'va-vissage',    name:'Vissage / Serrage',type:'va',  desc:'Serrage boulons, couples'},
+  {id:'va-soudure',    name:'Soudure / Collage',type:'va',  desc:'Soudure, collage, brasure'},
+  {id:'va-usinage',    name:'Usinage / Meulage',type:'va',  desc:'Taraudage, meulage, perçage'},
+  {id:'va-reglage',    name:'Réglage',          type:'va',  desc:'Réglage machine ou pièce'},
+  {id:'va-autre',      name:'Autre VA',          type:'va',  desc:'Opération VA non listée'},
+  // NVA
+  {id:'nva-attente',   name:'Attente pièce',    type:'nva', desc:'Attente de pièce ou matière'},
+  {id:'nva-attente-m', name:'Attente machine',  type:'nva', desc:'Attente de disponibilité machine'},
+  {id:'nva-deplacement',name:'Déplacement',     type:'nva', desc:'Transport, marche, recherche'},
+  {id:'nva-recherche', name:'Recherche outil',  type:'nva', desc:'Chercher un outil ou document'},
+  {id:'nva-controle',  name:'Contrôle / Vérif.', type:'nva',desc:'Contrôle sans transformation'},
+  {id:'nva-retravail', name:'Retravail / Reprise',type:'nva',desc:'Corriger un défaut'},
+  {id:'nva-reglage',   name:'Réglage machine',  type:'nva', desc:'Réglage non productive'},
+  {id:'nva-rangement', name:'Rangement',        type:'nva', desc:'Ranger, nettoyer, trier'},
+  {id:'nva-pause',     name:'Pause / Interruption',type:'nva',desc:'Pause officielle ou imprévue'},
+  {id:'nva-admin',     name:'Paperasse / Admin',type:'nva', desc:'Remplir un doc, reporting'},
+  {id:'nva-attente-i', name:'Attente instruction',type:'nva',desc:'Attente consigne ou validation'},
+  {id:'nva-autre',     name:'Autre NVA',        type:'nva', desc:'Gaspillage non listé'},
+];
+
+// ═══════════════════════════════════════════════════════
+// ÉTAT
+// ═══════════════════════════════════════════════════════
+var S = {
+  current:  null,    // 'va' | 'nva' | null
+  startTs:  null,    // timestamp début séquence courante
+  sequences:[],      // [{type,cat,catName,start,end,duration}]
+  totalVA:  0,
+  totalNVA: 0,
+  chronoIv: null,
+  config: {
+    op:'', poste:'', takt:165,
+  },
+  cats: JSON.parse(JSON.stringify(DEFAULT_CATS)),
+};
+
+var modalClassTarget = null; // index de la séquence à classifier
+var newCatType = 'nva';
+
+// ═══════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════
+function goPage(id){
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('on');});
+  document.querySelectorAll('.nav-i').forEach(function(n){n.classList.remove('on');});
+  var pg=document.getElementById('pg-'+id);
+  var nv=document.getElementById('nav-'+id);
+  if(pg) pg.classList.add('on');
+  if(nv) nv.classList.add('on');
+  if(id==='rapport')  renderRapport();
+  if(id==='settings') renderSettings();
+}
+
+function toast(msg,type){
+  var el=document.getElementById('toast');
+  el.textContent=msg;
+  el.style.background=type==='err'?'#3a0a0a':type==='ok'?'#0a2a0a':'var(--bg3)';
+  el.classList.add('on');
+  clearTimeout(el._t);
+  el._t=setTimeout(function(){el.classList.remove('on');},2200);
+}
+
+function showSessionModal(){
+  var mo=document.getElementById('modal-session');
+  document.getElementById('sess-op').value   = S.config.op||'';
+  document.getElementById('sess-poste').value= S.config.poste||'';
+  mo.style.display='flex';
+}
+
+// ═══════════════════════════════════════════════════════
+// CHRONO PRINCIPAL
+// ═══════════════════════════════════════════════════════
+function switchTo(type){
+  var now = Date.now();
+
+  // Clore la séquence précédente
+  if(S.current !== null && S.startTs !== null){
+    var dur = now - S.startTs;
+    var seq = {
+      type:     S.current,
+      cat:      null,
+      catName:  null,
+      start:    S.startTs,
+      end:      now,
+      duration: dur,
+      idx:      S.sequences.length,
+    };
+    S.sequences.push(seq);
+
+    if(S.current==='va')  S.totalVA  += dur;
+    else                  S.totalNVA += dur;
+
+    // Ouvrir le modal de classification pour la séquence qui vient de se terminer
+    // (sauf si c'est la toute première frappe)
+    openClassModal(S.sequences.length - 1);
+  }
+
+  // Démarrer la nouvelle séquence
+  S.current = type;
+  S.startTs = now;
+
+  // Visuel boutons
+  document.getElementById('btn-va').classList.toggle('active',  type==='va');
+  document.getElementById('btn-nva').classList.toggle('active', type==='nva');
+
+  var typeEl = document.getElementById('current-type');
+  var catEl  = document.getElementById('current-cat');
+  var timeEl = document.getElementById('current-time');
+  if(typeEl) typeEl.textContent = type==='va' ? '✅ Valeur ajoutée' : '❌ Non-valeur ajoutée';
+  if(catEl)  catEl.textContent  = '— à classifier —';
+  if(timeEl) timeEl.style.color = type==='va' ? 'var(--va)' : 'var(--nva)';
+
+  startCurrentChrono();
+  updateStats();
+  renderHistory();
+}
+
+function startCurrentChrono(){
+  clearInterval(S.chronoIv);
+  S.chronoIv = setInterval(function(){
+    if(!S.startTs) return;
+    var elapsed = Date.now() - S.startTs;
+    var el = document.getElementById('current-time');
+    if(el) el.textContent = fmtMs(elapsed);
+  }, 100);
+}
+
+function fmtMs(ms){
+  var s = Math.floor(ms/1000);
+  var m = Math.floor(s/60);
+  s = s%60;
+  return (m<10?'0'+m:m)+':'+(s<10?'0'+s:s);
+}
+
+function fmtMsLong(ms){
+  var s = Math.floor(ms/1000);
+  var m = Math.floor(s/60);
+  s = s%60;
+  if(m>0) return m+'m'+( s>0?(s+'s'):'');
+  return s+'s';
+}
+
+function updateStats(){
+  // Totaux incluant la séquence courante
+  var vaMs  = S.totalVA;
+  var nvaMs = S.totalNVA;
+  if(S.current==='va'  && S.startTs) vaMs  += Date.now()-S.startTs;
+  if(S.current==='nva' && S.startTs) nvaMs += Date.now()-S.startTs;
+  var total = vaMs+nvaMs;
+  var ratio = total>0 ? Math.round(vaMs/total*100) : 0;
+
+  var vaEl  = document.getElementById('st-va');
+  var nvaEl = document.getElementById('st-nva');
+  var rEl   = document.getElementById('st-ratio');
+  var barEl = document.getElementById('ratio-va');
+
+  if(vaEl)  vaEl.textContent  = fmtMs(vaMs);
+  if(nvaEl) nvaEl.textContent = fmtMs(nvaMs);
+  if(rEl)   rEl.textContent   = ratio+'%';
+  if(barEl) barEl.style.width = ratio+'%';
+
+  // Couleur du ratio
+  if(rEl){
+    rEl.style.color = ratio>=70?'var(--va)':ratio>=40?'var(--warn)':'var(--nva)';
+  }
+}
+
+// Mettre à jour les stats en continu
+setInterval(updateStats, 1000);
+
+// ═══════════════════════════════════════════════════════
+// HISTORIQUE
+// ═══════════════════════════════════════════════════════
+function renderHistory(){
+  var el = document.getElementById('history-list');
+  if(!el) return;
+  if(!S.sequences.length){
+    el.innerHTML='<div style="padding:14px;font-size:.72rem;color:var(--mut);text-align:center">Aucune séquence enregistrée</div>';
+    return;
+  }
+  // Afficher les 20 dernières en premier
+  var show = S.sequences.slice().reverse().slice(0,20);
+  el.innerHTML = show.map(function(seq,i){
+    var realIdx = S.sequences.length - 1 - i;
+    var unset   = !seq.catName;
+    return '<div class="hist-item" onclick="openClassModal('+realIdx+')">'
+      + '<div class="hi-dot '+seq.type+'"></div>'
+      + '<div class="hi-time">'+fmtMsLong(seq.duration)+'</div>'
+      + '<div class="hi-cat'+(unset?' unset':'')+'">'+( seq.catName || '⚠ Non classifié — tap pour classifier')+'</div>'
+      + '</div>';
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// MODAL CLASSIFICATION
+// ═══════════════════════════════════════════════════════
+function openClassModal(idx){
+  var seq = S.sequences[idx];
+  if(!seq) return;
+  modalClassTarget = idx;
+
+  var modal = document.getElementById('modal-class');
+  var dot   = document.getElementById('mc-dot');
+  var title = document.getElementById('mc-title');
+  var tdisp = document.getElementById('mc-time-disp');
+
+  if(dot)   dot.style.background   = seq.type==='va'?'var(--va)':'var(--nva)';
+  if(title) title.textContent       = seq.type==='va'?'Classifier VA':'Classifier NVA';
+  if(tdisp) tdisp.textContent       = fmtMsLong(seq.duration);
+
+  // Construire les options
+  var vaCats  = S.cats.filter(function(c){return c.type==='va';});
+  var nvaCats = S.cats.filter(function(c){return c.type==='nva';});
+
+  var vaSection  = document.getElementById('mc-va-section');
+  var nvaSection = document.getElementById('mc-nva-section');
+
+  function renderOpts(cats, cssType){
+    return '<div class="mc-grid">'+cats.map(function(cat){
+      var sel = seq.cat===cat.id ? ' sel-'+cssType : '';
+      return '<div class="mc-opt '+cssType+sel+'" onclick="selectCat(\''+cat.id+'\',\''+esc(cat.name)+'\',\''+cssType+'\')">'
+        + esc(cat.name) + '</div>';
+    }).join('')+'</div>';
+  }
+
+  if(vaSection){
+    vaSection.innerHTML = '<div class="mc-section">✅ VA — Valeur ajoutée</div>'
+      + renderOpts(vaCats, 'va');
+  }
+  if(nvaSection){
+    nvaSection.innerHTML = '<div class="mc-section">❌ NVA — Non-valeur ajoutée</div>'
+      + renderOpts(nvaCats, 'nva');
+  }
+
+  modal.classList.add('on');
+}
+
+var selectedCat = null;
+
+function selectCat(id, name, type){
+  selectedCat = {id:id, name:name, type:type};
+  // Retirer toutes les sélections
+  document.querySelectorAll('.mc-opt').forEach(function(el){
+    el.classList.remove('sel-va','sel-nva');
+  });
+  // Sélectionner celle-ci
+  event.currentTarget.classList.add('sel-'+type);
+}
+
+function confirmClass(){
+  if(!selectedCat){ toast('Choisissez une catégorie','err'); return; }
+  if(modalClassTarget===null) return;
+  var seq = S.sequences[modalClassTarget];
+  if(seq){
+    seq.cat     = selectedCat.id;
+    seq.catName = selectedCat.name;
+    seq.catType = selectedCat.type;
+  }
+  selectedCat = null;
+  closeClassModal();
+  renderHistory();
+  toast('Classifié : '+seq.catName,'ok');
+}
+
+function closeClassModal(){
+  document.getElementById('modal-class').classList.remove('on');
+  selectedCat = null;
+}
+
+function esc(s){ return String(s||'').replace(/'/g,"\\'").replace(/"/g,'&quot;'); }
+
+// ═══════════════════════════════════════════════════════
+// RAPPORT
+// ═══════════════════════════════════════════════════════
+function renderRapport(){
+  var vaMs=S.totalVA, nvaMs=S.totalNVA;
+  var total=vaMs+nvaMs;
+  var ratio=total>0?Math.round(vaMs/total*100):0;
+  var unclass=S.sequences.filter(function(s){return!s.catName;}).length;
+
+  var el=function(id){return document.getElementById(id);};
+  if(el('r-op'))    el('r-op').textContent    = S.config.op?S.config.op+' — '+S.config.poste:S.config.poste||'Observation';
+  if(el('r-sub'))   el('r-sub').textContent   = new Date().toLocaleDateString('fr-FR');
+  if(el('rv-va'))   el('rv-va').textContent   = fmtMs(vaMs);
+  if(el('rv-nva'))  el('rv-nva').textContent  = fmtMs(nvaMs);
+  if(el('rv-ratio'))el('rv-ratio').textContent= ratio+'%';
+  if(el('rv-seqs')) el('rv-seqs').textContent = S.sequences.length;
+
+  // Takt
+  var taktMs = (S.config.takt||165)*60*1000;
+  var taktPct= total>0?Math.min(100,Math.round(total/taktMs*100)):0;
+
+  // Détail NVA par catégorie
+  var nvaCats={};
+  S.sequences.filter(function(s){return s.type==='nva'&&s.catName;}).forEach(function(s){
+    if(!nvaCats[s.catName]) nvaCats[s.catName]={dur:0,count:0};
+    nvaCats[s.catName].dur+=s.duration;
+    nvaCats[s.catName].count++;
+  });
+  var keys=Object.keys(nvaCats).sort(function(a,b){return nvaCats[b].dur-nvaCats[a].dur;});
+  var maxDur=keys.length?nvaCats[keys[0]].dur:1;
+  var catsEl=el('r-cats');
+  if(catsEl){
+    if(!keys.length){
+      catsEl.innerHTML='<div style="font-size:.72rem;color:var(--mut)">Aucune séquence NVA classifiée</div>';
+    } else {
+      catsEl.innerHTML=keys.map(function(k){
+        var pct=Math.round(nvaCats[k].dur/maxDur*100);
+        var tpct=nvaMs>0?Math.round(nvaCats[k].dur/nvaMs*100):0;
+        return '<div class="r-bar-row">'
+          +'<div class="r-bar-label"><span class="rbl">'+k+'</span>'
+          +'<span class="rbv">'+fmtMsLong(nvaCats[k].dur)+' ('+tpct+'%)</span></div>'
+          +'<div class="r-bar-bg"><div class="r-bar-fill" style="width:'+pct+'%;background:var(--nva)"></div></div>'
+          +'</div>';
+      }).join('');
+    }
+  }
+
+  // Non classifiés
+  var ucEl=el('r-unclass');
+  if(ucEl){
+    if(!unclass) ucEl.innerHTML='<span style="color:var(--va)">✓ Toutes les séquences sont classifiées</span>';
+    else ucEl.innerHTML='<span>'+unclass+' séquence(s) non classifiée(s)</span>'
+      +'<button onclick="classifyAll()" style="margin-left:10px;padding:3px 10px;background:var(--warn);'
+      +'border:none;border-radius:5px;color:#000;font-family:DM Mono,monospace;font-size:.65rem;cursor:pointer">'
+      +'Classifier maintenant</button>';
+  }
+}
+
+function classifyAll(){
+  // Ouvrir la première séquence non classifiée
+  for(var i=0;i<S.sequences.length;i++){
+    if(!S.sequences[i].catName){ goPage('chrono'); openClassModal(i); return; }
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// PARAMÈTRES
+// ═══════════════════════════════════════════════════════
+function renderSettings(){
+  var vaEl  = document.getElementById('cats-va-list');
+  var nvaEl = document.getElementById('cats-nva-list');
+  if(!vaEl||!nvaEl) return;
+
+  function renderCatList(cats, el){
+    el.innerHTML = cats.map(function(cat,i){
+      return '<div class="cat-item">'
+        +'<div class="cat-dot" style="background:'+(cat.type==='va'?'var(--va)':'var(--nva)')+'"></div>'
+        +'<div class="cat-name">'+cat.name+(cat.desc?'<br><span style="font-size:.6rem;color:var(--mut)">'+cat.desc+'</span>':'')+'</div>'
+        +'<span class="cat-type '+cat.type+'">'+cat.type.toUpperCase()+'</span>'
+        +'<button class="cat-del" onclick="deleteCategory(\''+cat.id+'\')">✕</button>'
+        +'</div>';
+    }).join('') || '<div style="font-size:.72rem;color:var(--mut);padding:8px 0">Aucune catégorie</div>';
+  }
+
+  renderCatList(S.cats.filter(function(c){return c.type==='va';}),  vaEl);
+  renderCatList(S.cats.filter(function(c){return c.type==='nva';}), nvaEl);
+
+  // Charger config
+  var opEl    = document.getElementById('cfg-op');
+  var posteEl = document.getElementById('cfg-poste');
+  var taktEl  = document.getElementById('cfg-takt');
+  if(opEl)    opEl.value    = S.config.op||'';
+  if(posteEl) posteEl.value = S.config.poste||'';
+  if(taktEl)  taktEl.value  = S.config.takt||165;
+}
+
+var newCatType = 'nva';
+
+function selectNewType(t){
+  newCatType=t;
+  document.getElementById('new-type-va').className  = 'type-opt'+(t==='va'?' va-sel':'');
+  document.getElementById('new-type-nva').className = 'type-opt'+(t==='nva'?' nva-sel':'');
+}
+
+function addCategory(){
+  var name = (document.getElementById('new-cat-name')||{}).value||'';
+  var desc = (document.getElementById('new-cat-desc')||{}).value||'';
+  if(!name.trim()){ toast('Saisissez un nom','err'); return; }
+  var id = 'custom-'+Date.now();
+  S.cats.push({id:id, name:name.trim(), type:newCatType, desc:desc.trim()});
+  saveConfig();
+  clearNewCatForm();
+  renderSettings();
+  toast('Catégorie ajoutée ✓','ok');
+}
+
+function deleteCategory(id){
+  if(!confirm('Supprimer cette catégorie ?')) return;
+  S.cats = S.cats.filter(function(c){return c.id!==id;});
+  saveConfig();
+  renderSettings();
+  toast('Catégorie supprimée','ok');
+}
+
+function clearNewCatForm(){
+  var n=document.getElementById('new-cat-name');
+  var d=document.getElementById('new-cat-desc');
+  if(n) n.value='';
+  if(d) d.value='';
+}
+
+// ═══════════════════════════════════════════════════════
+// EXPORT
+// ═══════════════════════════════════════════════════════
+function exportCSV(){
+  if(!S.sequences.length){ toast('Aucune séquence à exporter','err'); return; }
+  var rows=['Type,Catégorie,Durée (s),Durée (mm:ss),Début,Fin'];
+  S.sequences.forEach(function(s){
+    var durS=Math.round(s.duration/1000);
+    var start=new Date(s.start).toLocaleTimeString('fr-FR');
+    var end2=new Date(s.end).toLocaleTimeString('fr-FR');
+    rows.push([
+      s.type.toUpperCase(),
+      s.catName||'Non classifié',
+      durS,
+      fmtMs(s.duration),
+      start,end2
+    ].join(','));
+  });
+  var total=S.totalVA+S.totalNVA;
+  var ratio=total>0?Math.round(S.totalVA/total*100):0;
+  rows.push('');
+  rows.push('TOTAL VA,'+fmtMs(S.totalVA)+','+ratio+'%');
+  rows.push('TOTAL NVA,'+fmtMs(S.totalNVA));
+  rows.push('Opérateur,'+( S.config.op||'—'));
+  rows.push('Poste,'+(S.config.poste||'—'));
+
+  var blob=new Blob([rows.join('\n')],{type:'text/csv;charset=utf-8;'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url;a.download='leanva-'+(S.config.poste||'obs')+'-'+(Date.now())+'.csv';
+  a.click();URL.revokeObjectURL(url);
+  toast('CSV exporté ✓','ok');
+}
+
+function exportPNG(){
+  // Générer un canvas rapport simple
+  var W=600,H=400+S.cats.length*20;
+  var cv=document.createElement('canvas');
+  cv.width=W;cv.height=H;
+  var ctx=cv.getContext('2d');
+  ctx.fillStyle='#0C0C10';ctx.fillRect(0,0,W,H);
+
+  var vaMs=S.totalVA,nvaMs=S.totalNVA,total=vaMs+nvaMs;
+  var ratio=total>0?Math.round(vaMs/total*100):0;
+
+  // Titre
+  ctx.fillStyle='#7C6FFF';ctx.font='bold 22px Syne,sans-serif';ctx.textAlign='left';
+  ctx.fillText('LeanVA — '+(S.config.op||'—')+' / '+(S.config.poste||'—'),20,40);
+  ctx.fillStyle='#5A5A7A';ctx.font='13px DM Mono,monospace';
+  ctx.fillText(new Date().toLocaleDateString('fr-FR'),20,60);
+
+  // Barre VA/NVA
+  var bW=W-40,bH=28,bY=80;
+  ctx.fillStyle='#FF1744';ctx.fillRect(20,bY,bW,bH);
+  ctx.fillStyle='#00C853';ctx.fillRect(20,bY,bW*ratio/100,bH);
+  ctx.fillStyle='#fff';ctx.font='bold 14px Syne,sans-serif';ctx.textAlign='center';
+  ctx.fillText('VA '+ratio+'%  |  NVA '+(100-ratio)+'%',W/2,bY+19);
+
+  // Stats
+  ctx.textAlign='left';ctx.font='14px DM Mono,monospace';
+  ctx.fillStyle='#00C853';ctx.fillText('VA  : '+fmtMs(vaMs),20,130);
+  ctx.fillStyle='#FF1744';ctx.fillText('NVA : '+fmtMs(nvaMs),20,150);
+  ctx.fillStyle='#E8E8F4';ctx.fillText('Total : '+S.sequences.length+' séquences',20,170);
+
+  // Catégories NVA
+  var nvaCats={};
+  S.sequences.filter(function(s){return s.type==='nva'&&s.catName;}).forEach(function(s){
+    if(!nvaCats[s.catName]) nvaCats[s.catName]=0;
+    nvaCats[s.catName]+=s.duration;
+  });
+  var keys=Object.keys(nvaCats).sort(function(a,b){return nvaCats[b]-nvaCats[a];});
+  var yy=200;
+  ctx.fillStyle='#7C6FFF';ctx.font='bold 13px DM Mono,monospace';
+  ctx.fillText('Détail NVA :',20,yy);yy+=20;
+  var maxD=keys.length?nvaCats[keys[0]]:1;
+  keys.forEach(function(k){
+    ctx.fillStyle='#5A5A7A';ctx.fillText(k,20,yy);
+    ctx.fillStyle='#FF1744';ctx.fillRect(180,yy-12,(W-220)*nvaCats[k]/maxD,14);
+    ctx.fillStyle='#E8E8F4';ctx.font='12px DM Mono,monospace';
+    ctx.fillText(fmtMsLong(nvaCats[k]),180+(W-220)*nvaCats[k]/maxD+6,yy);
+    yy+=22;ctx.font='13px DM Mono,monospace';
+  });
+
+  var a=document.createElement('a');
+  a.href=cv.toDataURL('image/png');
+  a.download='leanva-rapport-'+Date.now()+'.png';
+  a.click();
+  toast('PNG exporté ✓','ok');
+}
+
+// ═══════════════════════════════════════════════════════
+// PERSISTANCE
+// ═══════════════════════════════════════════════════════
+function saveConfig(){
+  try{
+    localStorage.setItem('leanva_cats',   JSON.stringify(S.cats));
+    localStorage.setItem('leanva_config', JSON.stringify(S.config));
+  } catch(e){}
+}
+
+function loadConfig(){
+  try{
+    var cats=localStorage.getItem('leanva_cats');
+    if(cats) S.cats=JSON.parse(cats);
+    var cfg=localStorage.getItem('leanva_config');
+    if(cfg) S.config=Object.assign(S.config,JSON.parse(cfg));
+  } catch(e){}
+}
+
+function resetSession(){
+  if(S.sequences.length && !confirm('Démarrer une nouvelle session ? Les données seront perdues.')) return;
+  clearInterval(S.chronoIv);
+  S.current=null;S.startTs=null;S.sequences=[];S.totalVA=0;S.totalNVA=0;
+  document.getElementById('btn-va').classList.remove('active');
+  document.getElementById('btn-nva').classList.remove('active');
+  document.getElementById('current-time').textContent='00:00';
+  document.getElementById('current-time').style.color='var(--txt)';
+  document.getElementById('current-type').textContent='En attente';
+  document.getElementById('current-cat').textContent='— appuyez pour démarrer —';
+  renderHistory();updateStats();goPage('chrono');
+  toast('Nouvelle session démarrée','ok');
+}
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+loadConfig();
+renderHistory();
+</script>
+</body>
+</html>
